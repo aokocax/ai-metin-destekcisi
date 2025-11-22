@@ -1,6 +1,6 @@
 ## AI Yazım Asistanı ✍️
 
-Google Gemini API destekli, akıllı, hızlı ve modern Türkçe bir metin düzenleme aracı.
+Google Gemini ve ChatGPT API destekli, akıllı, hızlı ve modern Türkçe bir metin düzenleme aracı.
 
 Bu proje, yazdığınız metinleri gerçek zamanlı olarak analiz ederek tonunu değiştiren (zenginleştirme, resmileştirme, eğlenceli hale getirme), çeviri yapan ve içeriğe ilave bilgiler ekleyebilen bir Single Page Application (SPA)'dır.
 
