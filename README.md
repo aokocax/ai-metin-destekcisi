@@ -30,7 +30,7 @@ Tailwind CSS (CDN üzerinden, kurulum gerektirmez)
 
 jQuery (DOM manipülasyonu ve Ajax istekleri için)
 
-Google Gemini API (Yapay zeka modeli: gemini-2.5-flash-preview)
+Google Gemini API (Yapay zeka modeli: gemini-2.5-flash-preview) ChatGPT 4o ve ChatGPT 5.1 desteği.
 
 FontAwesome (İkonlar için)
 
