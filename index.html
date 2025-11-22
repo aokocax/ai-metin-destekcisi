@@ -97,12 +97,13 @@
             <!-- Settings Area -->
             <div class="flex flex-wrap items-center gap-3 text-sm">
                 
-                <!-- Provider Selection (New) -->
+                <!-- Provider Selection (Updated) -->
                 <div class="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
                     <i class="fa-solid fa-microchip text-gray-500"></i>
                     <select id="providerSelect" class="bg-transparent outline-none text-gray-700 font-medium cursor-pointer">
                         <option value="gemini">Google Gemini</option>
-                        <option value="openai">OpenAI (GPT-4o)</option>
+                        <option value="openai-4o">OpenAI (GPT-4o)</option>
+                        <option value="openai-5.1">OpenAI (GPT-5.1)</option>
                     </select>
                 </div>
 
@@ -237,10 +238,10 @@
             // Load Saved Provider
             const storedProvider = localStorage.getItem('selected_provider') || 'gemini';
             $('#providerSelect').val(storedProvider);
-            updateKeyPlaceholder(storedProvider);
-
-            // Load API Key based on provider
+            
+            // Load API Key based on provider group
             loadApiKey(storedProvider);
+            updateKeyPlaceholder(storedProvider);
 
             // Set interval from default select
             doneTypingInterval = parseInt($('#timeoutSelect').val());
@@ -251,6 +252,7 @@
             $('#providerSelect').on('change', function() {
                 const provider = $(this).val();
                 localStorage.setItem('selected_provider', provider);
+                
                 updateKeyPlaceholder(provider);
                 loadApiKey(provider);
                 
@@ -265,10 +267,11 @@
             $('#apiKeyInput').on('input', function() {
                 const provider = $('#providerSelect').val();
                 const key = $(this).val().trim();
-                // Store keys separately so user doesn't lose one when switching
+                
                 if(provider === 'gemini') {
                     localStorage.setItem('gemini_api_key', key);
                 } else {
+                    // Both openai-4o and openai-5.1 use the same key storage
                     localStorage.setItem('openai_api_key', key);
                 }
             });
@@ -327,6 +330,7 @@
                 if(provider === 'gemini') {
                     key = localStorage.getItem('gemini_api_key');
                 } else {
+                    // All openai variations share the key
                     key = localStorage.getItem('openai_api_key');
                 }
                 $('#apiKeyInput').val(key || '');
@@ -393,7 +397,12 @@
                     if (provider === 'gemini') {
                         await callGeminiAPI(apiKey, promptText);
                     } else {
-                        await callOpenAI(apiKey, promptText);
+                        // Determine model based on selection
+                        let modelName = "gpt-4o-mini"; // Default fallback
+                        if(provider === 'openai-5.1') {
+                            modelName = "gpt-5.1"; // Explicitly request 5.1
+                        }
+                        await callOpenAI(apiKey, promptText, modelName);
                     }
                 } catch (error) {
                     console.error(error);
@@ -425,10 +434,10 @@
                 });
             }
 
-            async function callOpenAI(key, prompt) {
+            async function callOpenAI(key, prompt, model) {
                 const url = `https://api.openai.com/v1/chat/completions`;
                 const data = {
-                    model: "gpt-4o-mini",
+                    model: model, // Use the dynamic model parameter
                     messages: [
                         { role: "system", content: "Sen yardımcı bir metin düzenleme asistanısın." },
                         { role: "user", content: prompt }
