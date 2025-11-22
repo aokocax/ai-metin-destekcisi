@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Yazım Asistanı</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Tooltip Style */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 220px;
+            background-color: #374151;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            top: 125%;
+            /* Position below */
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            font-weight: normal;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .loader span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #3B82F6;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+            margin: 0 2px;
+        }
+
+        .loader span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loader span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        /* Scrollbar customization */
+        textarea::-webkit-scrollbar,
+        div::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        textarea::-webkit-scrollbar-track,
+        div::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        textarea::-webkit-scrollbar-thumb,
+        div::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        textarea::-webkit-scrollbar-thumb:hover,
+        div::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 z-10">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+            <!-- Logo / Title -->
+            <div class="flex items-center gap-2 text-blue-600">
+                <i class="fa-solid fa-pen-nib text-xl"></i>
+                <h1 class="font-bold text-lg text-gray-800 tracking-tight">AI Yazım Asistanı</h1>
+            </div>
+
+            <!-- Settings Area -->
+            <div class="flex flex-wrap items-center gap-3 text-sm">
+
+                <!-- API Key Input -->
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-key text-gray-400 group-focus-within:text-blue-500"></i>
+                    </div>
+                    <input type="password" id="apiKeyInput" placeholder="Gemini API Key Giriniz"
+                        class="pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition w-48 md:w-64 text-gray-700 text-sm">
+                </div>
+
+                <!-- Timeout Selection -->
+                <div class="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg border border-gray-200">
+                    <i class="fa-regular fa-clock text-gray-500"></i>
+                    <select id="timeoutSelect"
+                        class="bg-transparent outline-none text-gray-700 font-medium cursor-pointer">
+                        <option value="2000">2 Sn</option>
+                        <option value="5000">5 Sn</option>
+                        <option value="10000">10 Sn</option>
+                        <option value="15000">15 Sn</option>
+                        <option value="30000" selected>30 Sn</option>
+                    </select>
+
+                    <!-- Tooltip -->
+                    <div class="tooltip cursor-help">
+                        <i class="fa-solid fa-circle-question text-gray-400 hover:text-blue-500 transition"></i>
+                        <span class="tooltiptext">Yazmayı durdurduktan ne kadar süre sonra yapay zekaya gönderileceğini
+                            belirler.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto w-full p-4 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 overflow-hidden">
+
+        <!-- Left Column: Input -->
+        <div class="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-full">
+            <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                <span class="font-semibold text-gray-600 text-sm"><i class="fa-regular fa-keyboard mr-2"></i>Metin
+                    Girişi</span>
+                <span class="text-xs text-gray-400">Enter: Gönder | Shift+Enter: Yeni Satır</span>
+            </div>
+            <textarea id="inputText"
+                class="flex-1 w-full p-4 resize-none outline-none text-gray-700 leading-relaxed text-base focus:bg-blue-50/30 transition"
+                placeholder="Buraya yazmaya başlayın..."></textarea>
+        </div>
+
+        <!-- Right Column: Controls & Output -->
+        <div class="flex flex-col gap-3 h-full overflow-hidden">
+
+            <!-- Controls Card -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 shrink-0">
+                <div class="flex flex-col gap-3">
+
+                    <!-- Row 1: Tone & Language -->
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <!-- Tone Radios -->
+                        <div class="flex bg-gray-100 p-1 rounded-lg">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="tone" value="zenginleştir" class="peer sr-only" checked>
+                                <span
+                                    class="block px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 peer-checked:bg-white peer-checked:text-blue-600 peer-checked:shadow-sm transition-all hover:text-gray-700">Zenginleştir</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="tone" value="resmileştir" class="peer sr-only">
+                                <span
+                                    class="block px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 peer-checked:bg-white peer-checked:text-blue-600 peer-checked:shadow-sm transition-all hover:text-gray-700">Resmileştir</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="tone" value="eğlenceli" class="peer sr-only">
+                                <span
+                                    class="block px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 peer-checked:bg-white peer-checked:text-blue-600 peer-checked:shadow-sm transition-all hover:text-gray-700">Eğlenceli</span>
+                            </label>
+                        </div>
+
+                        <!-- Language Select -->
+                        <select id="languageSelect"
+                            class="bg-gray-100 border-transparent text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 outline-none border border-gray-200">
+                            <option value="Turkish">Türkçe</option>
+                            <option value="English">English</option>
+                        </select>
+                    </div>
+
+                    <!-- Row 2: Checkbox -->
+                    <div class="flex items-center">
+                        <input id="extraInfoCheck" type="checkbox"
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+                        <label for="extraInfoCheck"
+                            class="ml-2 text-sm font-medium text-gray-600 cursor-pointer select-none">İlave bilgi ve
+                            detay ekle</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Card -->
+            <div
+                class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col relative">
+                <div class="bg-blue-50 px-4 py-2 border-b border-blue-100 flex items-center justify-between">
+                    <span class="font-semibold text-blue-700 text-sm"><i class="fa-solid fa-robot mr-2"></i>Yapay Zeka
+                        Önerisi</span>
+                    <button id="copyBtn"
+                        class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 opacity-0 transition-opacity duration-200">
+                        <i class="fa-regular fa-copy"></i> Kopyala
+                    </button>
+                </div>
+
+                <div id="outputContainer" class="flex-1 p-6 overflow-y-auto text-gray-700 leading-relaxed relative">
+                    <!-- Placeholder Content -->
+                    <div id="placeholderState"
+                        class="h-full flex flex-col items-center justify-center text-gray-300 select-none">
+                        <i class="fa-solid fa-wand-magic-sparkles text-4xl mb-3"></i>
+                        <p class="text-sm">Yazmaya başlayın, sihir gerçekleşsin.</p>
+                    </div>
+
+                    <!-- Loading Animation -->
+                    <div id="loadingState"
+                        class="hidden absolute inset-0 bg-white/90 z-10 flex flex-col items-center justify-center">
+                        <div class="loader">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <p class="text-gray-500 text-xs mt-3 font-medium animate-pulse">Yapay zeka düşünüyor...</p>
+                    </div>
+
+                    <!-- Real Content -->
+                    <div id="outputText" class="hidden"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        $(document).ready(function () {
+            // --- Configuration & State ---
+            let typingTimer;
+            let doneTypingInterval = 30000; // Default 30s
+            let lastSentText = "";
+            const $input = $('#inputText');
+            const $output = $('#outputText');
+            const $loading = $('#loadingState');
+            const $placeholder = $('#placeholderState');
+            const $copyBtn = $('#copyBtn');
+
+            // --- Initialization ---
+
+            // Load API Key from LocalStorage
+            const storedKey = localStorage.getItem('gemini_api_key');
+            if (storedKey) {
+                $('#apiKeyInput').val(storedKey);
+            }
+
+            // Set interval from default select
+            doneTypingInterval = parseInt($('#timeoutSelect').val());
+
+            // --- Event Listeners ---
+
+            // Save API Key on change
+            $('#apiKeyInput').on('input', function () {
+                localStorage.setItem('gemini_api_key', $(this).val().trim());
+            });
+
+            // Change Timeout Interval
+            $('#timeoutSelect').on('change', function () {
+                doneTypingInterval = parseInt($(this).val());
+            });
+
+            // Trigger API when settings change (NEW)
+            $('input[name="tone"], #languageSelect, #extraInfoCheck').on('change', function () {
+                lastSentText = ""; // Force re-send even if text hasn't changed
+                processText();
+            });
+
+            // Typing Logic
+            $input.on('keyup', function (e) {
+                clearTimeout(typingTimer);
+
+                // Check for Enter key (13)
+                if (e.which === 13 && !e.shiftKey) {
+                    // Trigger send immediately on Enter
+                    processText();
+                } else {
+                    // Set timer for auto-send
+                    typingTimer = setTimeout(processText, doneTypingInterval);
+                }
+            });
+
+            // Copy Button
+            $('#copyBtn').on('click', function () {
+                const text = $output.text();
+                const tempInput = $("<textarea>");
+                $("body").append(tempInput);
+                tempInput.val(text).select();
+                document.execCommand("copy");
+                tempInput.remove();
+
+                const originalText = $(this).html();
+                $(this).html('<i class="fa-solid fa-check"></i> Kopyalandı');
+                setTimeout(() => {
+                    $(this).html(originalText);
+                }, 2000);
+            });
+
+            // --- Main Logic Functions ---
+
+            function getLastParagraph(text) {
+                if (!text) return "";
+
+                const trimmed = text.trimEnd();
+                const lastDoubleNewline = trimmed.lastIndexOf('\n\n');
+
+                if (lastDoubleNewline !== -1) {
+                    return trimmed.substring(lastDoubleNewline).trim();
+                }
+
+                // Fallback: try single newline if it's a list or single lines
+                const lastNewline = trimmed.lastIndexOf('\n');
+                if (lastNewline !== -1 && trimmed.length - lastNewline > 1) {
+                    const parts = trimmed.split('\n');
+                    for (let i = parts.length - 1; i >= 0; i--) {
+                        if (parts[i].trim() !== "") return parts[i].trim();
+                    }
+                }
+
+                return trimmed;
+            }
+
+            async function processText() {
+                const fullText = $input.val();
+                const currentParagraph = getLastParagraph(fullText);
+
+                // Validation: Empty or same as last sent
+                // Note: If settings changed, lastSentText is cleared, so this check passes.
+                if (!currentParagraph || currentParagraph.length < 3 || currentParagraph === lastSentText) {
+                    return;
+                }
+
+                const apiKey = $('#apiKeyInput').val().trim();
+                if (!apiKey) {
+                    // Only alert if user is explicitly typing Enter or interacting, 
+                    // maybe suppress for passive settings change if needed, but good to warn.
+                    // alert("Lütfen önce API Key giriniz!");
+                    return;
+                }
+
+                // Update UI state
+                lastSentText = currentParagraph;
+                showLoading(true);
+
+                // Gather Options
+                const tone = $('input[name="tone"]:checked').val();
+                const lang = $('#languageSelect').val();
+                const extraInfo = $('#extraInfoCheck').is(':checked');
+
+                // Construct Prompt
+                let promptText = `Aşağıdaki metni bir yazım asistanı olarak yeniden yaz.\n\n`;
+                promptText += `Girdi Metni: "${currentParagraph}"\n\n`;
+                promptText += `İstekler:\n`;
+                promptText += `1. Ton: ${tone} (Buna uygun üslup kullan).\n`;
+                promptText += `2. Dil: ${lang} (Çıktı bu dilde olsun).\n`;
+
+                if (extraInfo) {
+                    promptText += `3. Lütfen bu konuyla ilgili kısa, faydalı ilave bir bilgi veya bağlam da ekle.\n`;
+                } else {
+                    promptText += `3. Sadece metni revize et, ek açıklama yapma.\n`;
+                }
+
+                try {
+                    await callGeminiAPI(apiKey, promptText);
+                } catch (error) {
+                    console.error(error);
+                    $output.text("Hata: API isteği başarısız oldu. API Key'inizi kontrol edin.");
+                    $output.show();
+                    $placeholder.hide();
+                    showLoading(false);
+                }
+            }
+
+            async function callGeminiAPI(key, prompt) {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
+
+                const data = {
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                };
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify(data),
+                    success: function (response) {
+                        showLoading(false);
+                        const resultText = response.candidates[0].content.parts[0].text;
+
+                        // Display Result
+                        $placeholder.hide();
+                        $output.html(formatOutput(resultText)).fadeIn();
+                        $copyBtn.css('opacity', 1);
+                    },
+                    error: function (xhr, status, error) {
+                        showLoading(false);
+                        $placeholder.hide();
+                        $output.html(`<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Bir hata oluştu: ${xhr.status} - ${error}</span>`).show();
+                    }
+                });
+            }
+
+            function showLoading(isLoading) {
+                if (isLoading) {
+                    $loading.removeClass('hidden').addClass('flex');
+                } else {
+                    $loading.removeClass('flex').addClass('hidden');
+                }
+            }
+
+            function formatOutput(text) {
+                // Simple formatter: replace newlines with <br> and bold text logic if needed
+                return text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            }
+        });
+    </script>
+</body>
+
+</html>
